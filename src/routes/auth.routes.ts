@@ -12,6 +12,10 @@ import {
   revokeAllSessions,
   logout,
 } from "../modules/sessions/session.controller";
+import {
+  forgotPassword,
+  resetPassword,
+} from "../modules/password-reset/password-reset.controller";
 
 const router = Router();
 
@@ -34,5 +38,7 @@ router.get("/sessions", requireAuth, listSessions);
 router.delete("/sessions/:id", requireAuth, revokeSession);
 router.post("/sessions/revoke-all", requireAuth, revokeAllSessions);
 router.post("/logout", requireAuth, logout);
+router.post("/forgot-password", forgotPassword);
+router.post("/reset-password", resetPassword);
 
 export default router;

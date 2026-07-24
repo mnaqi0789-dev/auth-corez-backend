@@ -7,9 +7,9 @@ generator client {
   provider = "prisma-client-js"
 }
 
-datasource: {
-  url: env("DIRECT_URL"),
-},
+datasource db {
+  provider = "postgresql"
+}
 
 model User {
   id                  String    @id @default(cuid())
@@ -24,6 +24,7 @@ model User {
   oauthAccounts       OAuthAccount[]
   mfaSecret           String?
   mfaEnabled          Boolean   @default(false)
+  tokens              Token[]
 }
 
 model Session {
@@ -56,4 +57,15 @@ model OAuthAccount {
   createdAt      DateTime @default(now())
 
   @@unique([provider, providerUserId])
+}
+
+model Token {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  tokenHash String   @unique
+  type      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
 }
