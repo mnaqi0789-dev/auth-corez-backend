@@ -6,6 +6,10 @@ export const sessionRepository: ISessionRepository = {
     return prisma.session.create({ data });
   },
 
+  findById(id) {
+    return prisma.session.findUnique({ where: { id } });
+  },
+
   findByRefreshToken(refreshToken) {
     return prisma.session.findUnique({ where: { refreshToken } });
   },

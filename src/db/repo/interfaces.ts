@@ -17,6 +17,7 @@ export interface ISessionRepository {
     ipAddress: string | null;
     expiresAt: Date;
   }): Promise<Session>;
+  findById(id: string): Promise<Session | null>;
   findByRefreshToken(refreshToken: string): Promise<Session | null>;
   revoke(id: string): Promise<Session>;
   revokeAllForUser(userId: string): Promise<void>;

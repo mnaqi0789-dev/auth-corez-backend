@@ -6,6 +6,12 @@ import { requireAuth, AuthenticatedRequest } from "../middleware/requireAuth";
 import { userRepository } from "../db/repo/user.repository";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Response } from "express";
+import {
+  listSessions,
+  revokeSession,
+  revokeAllSessions,
+  logout,
+} from "../modules/sessions/session.controller";
 
 const router = Router();
 
@@ -23,5 +29,10 @@ router.get(
       .json({ id: user?.id, email: user?.email, role: user?.role });
   }),
 );
+
+router.get("/sessions", requireAuth, listSessions);
+router.delete("/sessions/:id", requireAuth, revokeSession);
+router.post("/sessions/revoke-all", requireAuth, revokeAllSessions);
+router.post("/logout", requireAuth, logout);
 
 export default router;
