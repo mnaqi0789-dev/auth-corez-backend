@@ -4,6 +4,7 @@ import { login } from "../modules/password-auth/login.controller";
 import { refresh } from "../modules/tokens/refresh.controller";
 import { requireAuth, AuthenticatedRequest } from "../middleware/requireAuth";
 import { userRepository } from "../db/repo/user.repository";
+import { verifyEmail } from "../modules/email-verification/verify-email.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
 import { Response } from "express";
 import {
@@ -40,5 +41,6 @@ router.post("/sessions/revoke-all", requireAuth, revokeAllSessions);
 router.post("/logout", requireAuth, logout);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
+router.get("/verify-email/:token", verifyEmail);
 
 export default router;

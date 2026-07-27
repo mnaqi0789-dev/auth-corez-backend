@@ -4,6 +4,7 @@ import { hashPassword } from "./password.service";
 import { userRepository } from "../../db/repo/user.repository";
 import { ConflictError, ValidationError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { eventBus } from "../../core/events/eventBus";
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const parsed = registerSchema.safeParse(req.body);
@@ -22,6 +23,8 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
 
   const passwordHash = await hashPassword(password);
   const user = await userRepository.create({ email, passwordHash });
+
+  eventBus.emit("user.registered", { userId: user.id });
 
   res.status(201).json({
     id: user.id,

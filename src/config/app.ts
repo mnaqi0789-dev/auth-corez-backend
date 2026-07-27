@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler";
 import authRoutes from "../routes/auth.routes";
+import "../modules/email-verification/listener";
 
 const app: Application = express();
 
