@@ -5,6 +5,7 @@ import { comparePassword } from "./password.service";
 import { issueSession } from "../tokens/session.service";
 import { UnauthorizedError, ValidationError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { logEvent } from "../../core/audit/auditLogger";
 import env from "../../config/env";
 
 const loginSchema = z.object({
@@ -37,16 +38,19 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) {
     const updated = await userRepository.incrementFailedLoginAttempts(user.id);
+    await logEvent("login_failed", user.id, req.ip ?? null);
     if (updated.failedLoginAttempts >= MAX_ATTEMPTS) {
       await userRepository.lockAccountUntil(
         user.id,
         new Date(Date.now() + LOCK_DURATION_MS),
       );
+      await logEvent("account_locked", user.id, req.ip ?? null);
     }
     throw new UnauthorizedError("Invalid email or password");
   }
 
   await userRepository.resetFailedLoginAttempts(user.id);
+  await logEvent("login_success", user.id, req.ip ?? null);
 
   const { accessToken, refreshToken } = await issueSession(user.id, req);
 

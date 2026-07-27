@@ -2,6 +2,7 @@ import { Response } from "express";
 import { sessionRepository } from "../../db/repo/session.repository";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { AuthenticatedRequest } from "../../middleware/requireAuth";
+import { logEvent } from "../../core/audit/auditLogger";
 import {
   ForbiddenError,
   NotFoundError,
@@ -30,9 +31,9 @@ export const listSessions = asyncHandler(
 export const revokeSession = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const { id } = req.params;
-if (typeof id !== "string") {
-  throw new ValidationError("Invalid session id");
-}
+    if (typeof id !== "string") {
+      throw new ValidationError("Invalid session id");
+    }
     const session = await sessionRepository.findById(id);
     if (!session) {
       throw new NotFoundError("Session not found");
@@ -43,6 +44,9 @@ if (typeof id !== "string") {
     }
 
     await sessionRepository.revoke(id);
+    await logEvent("session_revoked", req.user!.userId, req.ip ?? null, {
+      sessionId: id,
+    });
     res.status(200).json({ message: "Session revoked" });
   },
 );

@@ -3,6 +3,7 @@ import { hashToken } from "../tokens/hash.util";
 import prisma from "../../db/prisma";
 import { UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { logEvent } from "../../core/audit/auditLogger";
 
 export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
   const { token } = req.params;
@@ -32,6 +33,8 @@ export const verifyEmail = asyncHandler(async (req: Request, res: Response) => {
     where: { id: tokenRow.id },
     data: { used: true },
   });
+
+  await logEvent("email_verified", tokenRow.userId, req.ip ?? null);
 
   res.status(200).json({ message: "Email verified successfully" });
 });

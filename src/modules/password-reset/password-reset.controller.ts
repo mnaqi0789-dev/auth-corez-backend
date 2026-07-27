@@ -8,6 +8,7 @@ import { hashToken } from "../tokens/hash.util";
 import prisma from "../../db/prisma";
 import { ValidationError, UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { logEvent } from "../../core/audit/auditLogger";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
 
@@ -90,6 +91,7 @@ export const resetPassword = asyncHandler(
     });
 
     await sessionRepository.revokeAllForUser(tokenRow.userId);
+    await logEvent("password_reset", tokenRow.userId, req.ip ?? null);
 
     res.status(200).json({ message: "Password reset successful" });
   },

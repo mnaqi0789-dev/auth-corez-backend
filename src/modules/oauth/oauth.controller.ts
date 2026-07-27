@@ -8,6 +8,7 @@ import { userRepository } from "../../db/repo/user.repository";
 import { issueSession } from "../tokens/session.service";
 import { ValidationError, UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { logEvent } from "../../core/audit/auditLogger";
 import prisma from "../../db/prisma";
 import env from "../../config/env";
 
@@ -55,6 +56,7 @@ export const googleCallback = asyncHandler(
     });
 
     let userId: string;
+    let wasSignup = false;
 
     if (existingOAuthAccount) {
       userId = existingOAuthAccount.userId;
@@ -87,8 +89,18 @@ export const googleCallback = asyncHandler(
           },
         });
         userId = newUser.id;
+        wasSignup = true;
       }
     }
+
+    await logEvent(
+      wasSignup ? "oauth_signup" : "oauth_login",
+      userId,
+      req.ip ?? null,
+      {
+        provider: "google",
+      },
+    );
 
     const { accessToken, refreshToken } = await issueSession(userId, req);
 
