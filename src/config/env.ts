@@ -8,6 +8,9 @@ const envSchema = z.object({
   DIRECT_URL: z.string().min(1),
   JWT_ACCESS_SECRET: z.string().min(32),
   JWT_REFRESH_SECRET: z.string().min(32),
+  GOOGLE_CLIENT_ID: z.string().min(1),
+  GOOGLE_CLIENT_SECRET: z.string().min(1),
+  GOOGLE_REDIRECT_URI: z.string().min(1),
   PORT: z.string().default("4000"),
   NODE_ENV: z
     .enum(["development", "production", "test"])

@@ -4,7 +4,8 @@
   "description": "Here i would be making personal docs about each and everything i learned through out my fullstack dev journey",
   "main": "index.js",
   "scripts": {
-"dev": "tsx watch src/index.ts",    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "tsx watch src/index.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
@@ -26,6 +27,7 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "google-auth-library": "^10.9.1",
     "jsonwebtoken": "^9.0.3",
     "pg": "^8.22.0",
     "zod": "^4.4.3"

@@ -6,6 +6,10 @@ import { requireAuth, AuthenticatedRequest } from "../middleware/requireAuth";
 import { userRepository } from "../db/repo/user.repository";
 import { verifyEmail } from "../modules/email-verification/verify-email.controller";
 import { asyncHandler } from "../middleware/asyncHandler";
+import {
+  googleRedirect,
+  googleCallback,
+} from "../modules/oauth/oauth.controller";
 import { Response } from "express";
 import {
   listSessions,
@@ -42,5 +46,7 @@ router.post("/logout", requireAuth, logout);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/verify-email/:token", verifyEmail);
+router.get("/oauth/google", googleRedirect);
+router.get("/oauth/google/callback", googleCallback);
 
 export default router;
