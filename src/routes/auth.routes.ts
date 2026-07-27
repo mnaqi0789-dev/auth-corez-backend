@@ -11,6 +11,7 @@ import {
   googleCallback,
 } from "../modules/oauth/oauth.controller";
 import { Response } from "express";
+import { rateLimiter } from "../middleware/rateLimiter";
 import {
   listSessions,
   revokeSession,
@@ -48,5 +49,8 @@ router.post("/reset-password", resetPassword);
 router.get("/verify-email/:token", verifyEmail);
 router.get("/oauth/google", googleRedirect);
 router.get("/oauth/google/callback", googleCallback);
+router.post("/register", rateLimiter(5, 15 * 60 * 1000), register);
+router.post("/login", rateLimiter(5, 15 * 60 * 1000), login);
+router.post("/forgot-password", rateLimiter(5, 15 * 60 * 1000), forgotPassword);
 
 export default router;
