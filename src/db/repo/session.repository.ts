@@ -33,4 +33,11 @@ export const sessionRepository: ISessionRepository = {
       where: { userId, revoked: false },
     });
   },
+
+  findAllByUserId(userId) {
+    return prisma.session.findMany({
+      where: { userId },
+      orderBy: { createdAt: "desc" },
+    });
+  },
 };

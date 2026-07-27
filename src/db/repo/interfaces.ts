@@ -1,4 +1,4 @@
-import { User, Session } from "@prisma/client";
+import { User, Session, AuthEvent } from "@prisma/client";
 
 export interface IUserRepository {
   findByEmail(email: string): Promise<User | null>;
@@ -7,6 +7,10 @@ export interface IUserRepository {
   incrementFailedLoginAttempts(id: string): Promise<User>;
   resetFailedLoginAttempts(id: string): Promise<User>;
   lockAccountUntil(id: string, until: Date): Promise<User>;
+  findAllPaginated(
+    page: number,
+    limit: number,
+  ): Promise<{ users: User[]; total: number }>;
 }
 
 export interface ISessionRepository {
@@ -22,4 +26,13 @@ export interface ISessionRepository {
   revoke(id: string): Promise<Session>;
   revokeAllForUser(userId: string): Promise<void>;
   findActiveByUserId(userId: string): Promise<Session[]>;
+  findAllByUserId(userId: string): Promise<Session[]>;
+}
+
+export interface IAuditEventRepository {
+  findPaginated(
+    page: number,
+    limit: number,
+    userId?: string,
+  ): Promise<{ events: AuthEvent[]; total: number }>;
 }

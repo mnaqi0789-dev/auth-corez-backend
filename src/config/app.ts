@@ -3,6 +3,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import { errorHandler } from "../middleware/errorHandler";
 import authRoutes from "../routes/auth.routes";
+import adminRoutes from "../routes/admin.routes";
 import "../modules/email-verification/listener";
 
 const app: Application = express();
@@ -16,6 +17,7 @@ app.get("/health", (_req: Request, res: Response) => {
 });
 
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({ message: "Route not found" });

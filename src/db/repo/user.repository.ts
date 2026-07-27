@@ -34,4 +34,17 @@ export const userRepository: IUserRepository = {
       data: { lockedUntil: until },
     });
   },
+
+  async findAllPaginated(page, limit) {
+    const skip = (page - 1) * limit;
+    const [users, total] = await Promise.all([
+      prisma.user.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.user.count(),
+    ]);
+    return { users, total };
+  },
 };
