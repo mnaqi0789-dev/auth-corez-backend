@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { sessionRepository } from "../../db/repo/session.repository";
+import { userRepository } from "../../db/repo/user.repository";
 import { signAccessToken, generateRefreshToken } from "./token.service";
 import { UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
@@ -37,6 +38,13 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     throw new UnauthorizedError("Session invalid, all sessions revoked");
   }
 
+  const user = await userRepository.findById(session.userId);
+  if (!user) {
+    await sessionRepository.revoke(session.id);
+    res.clearCookie("refreshToken");
+    throw new UnauthorizedError("User no longer exists");
+  }
+
   await sessionRepository.revoke(session.id);
 
   const newRefreshToken = generateRefreshToken();
@@ -48,7 +56,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     expiresAt: new Date(Date.now() + SEVEN_DAYS_MS),
   });
 
-  const accessToken = signAccessToken(session.userId);
+  const accessToken = signAccessToken(user.id, user.role);
 
   res.cookie("refreshToken", newRefreshToken, {
     httpOnly: true,

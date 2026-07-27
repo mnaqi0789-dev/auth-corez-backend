@@ -56,10 +56,18 @@ export const googleCallback = asyncHandler(
     });
 
     let userId: string;
+    let role: string;
     let wasSignup = false;
 
     if (existingOAuthAccount) {
-      userId = existingOAuthAccount.userId;
+      const linkedUser = await userRepository.findById(
+        existingOAuthAccount.userId,
+      );
+      if (!linkedUser) {
+        throw new UnauthorizedError("Linked account no longer exists");
+      }
+      userId = linkedUser.id;
+      role = linkedUser.role;
     } else {
       const existingUser = await userRepository.findByEmail(profile.email);
 
@@ -72,6 +80,7 @@ export const googleCallback = asyncHandler(
           },
         });
         userId = existingUser.id;
+        role = existingUser.role;
       } else if (existingUser && !profile.emailVerified) {
         throw new UnauthorizedError(
           "Email exists but is not verified with Google; cannot auto-link",
@@ -89,6 +98,7 @@ export const googleCallback = asyncHandler(
           },
         });
         userId = newUser.id;
+        role = newUser.role;
         wasSignup = true;
       }
     }
@@ -102,7 +112,7 @@ export const googleCallback = asyncHandler(
       },
     );
 
-    const { accessToken, refreshToken } = await issueSession(userId, req);
+    const { accessToken, refreshToken } = await issueSession(userId, role, req);
 
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,

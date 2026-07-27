@@ -4,8 +4,8 @@ import { sessionRepository } from "../../db/repo/session.repository";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function issueSession(userId: string, req: Request) {
-  const accessToken = signAccessToken(userId);
+export async function issueSession(userId: string, role: string, req: Request) {
+  const accessToken = signAccessToken(userId, role);
   const refreshToken = generateRefreshToken();
 
   await sessionRepository.create({

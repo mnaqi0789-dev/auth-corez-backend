@@ -52,7 +52,11 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   await userRepository.resetFailedLoginAttempts(user.id);
   await logEvent("login_success", user.id, req.ip ?? null);
 
-  const { accessToken, refreshToken } = await issueSession(user.id, req);
+  const { accessToken, refreshToken } = await issueSession(
+    user.id,
+    user.role,
+    req,
+  );
 
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,

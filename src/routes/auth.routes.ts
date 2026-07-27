@@ -25,8 +25,8 @@ import {
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
+router.post("/register", rateLimiter(5, 15 * 60 * 1000), register);
+router.post("/login", rateLimiter(5, 15 * 60 * 1000), login);
 router.post("/refresh", refresh);
 
 router.get(
@@ -44,13 +44,10 @@ router.get("/sessions", requireAuth, listSessions);
 router.delete("/sessions/:id", requireAuth, revokeSession);
 router.post("/sessions/revoke-all", requireAuth, revokeAllSessions);
 router.post("/logout", requireAuth, logout);
-router.post("/forgot-password", forgotPassword);
+router.post("/forgot-password", rateLimiter(5, 15 * 60 * 1000), forgotPassword);
 router.post("/reset-password", resetPassword);
 router.get("/verify-email/:token", verifyEmail);
 router.get("/oauth/google", googleRedirect);
 router.get("/oauth/google/callback", googleCallback);
-router.post("/register", rateLimiter(5, 15 * 60 * 1000), register);
-router.post("/login", rateLimiter(5, 15 * 60 * 1000), login);
-router.post("/forgot-password", rateLimiter(5, 15 * 60 * 1000), forgotPassword);
 
 export default router;
