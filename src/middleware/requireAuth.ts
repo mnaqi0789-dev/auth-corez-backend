@@ -3,7 +3,7 @@ import { verifyAccessToken } from "../modules/tokens/token.service";
 import { UnauthorizedError } from "../core/errors/AppError";
 
 export interface AuthenticatedRequest extends Request {
-  user?: { userId: string; role: string };
+  user?: { userId: string };
 }
 
 export function requireAuth(
@@ -20,7 +20,7 @@ export function requireAuth(
 
   try {
     const payload = verifyAccessToken(token);
-    req.user = { userId: payload.userId, role: payload.role };
+    req.user = { userId: payload.userId };
     next();
   } catch {
     throw new UnauthorizedError("Invalid or expired token");

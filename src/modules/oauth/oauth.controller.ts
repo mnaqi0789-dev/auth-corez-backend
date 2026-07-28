@@ -112,8 +112,7 @@ export const googleCallback = asyncHandler(
       },
     );
 
-    const { accessToken, refreshToken } = await issueSession(userId, role, req);
-
+const { accessToken, refreshToken } = await issueSession(userId, req);
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",

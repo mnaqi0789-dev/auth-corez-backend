@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { sessionRepository } from "../../db/repo/session.repository";
-import { userRepository } from "../../db/repo/user.repository";
 import { signAccessToken, generateRefreshToken } from "./token.service";
 import { UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import { logEvent } from "../../core/audit/auditLogger";
 import env from "../../config/env";
 import prisma from "../../db/prisma";
 
@@ -26,23 +26,11 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
 
   if (session.revoked) {
     await sessionRepository.revokeAllForUser(session.userId);
-    await prisma.authEvent.create({
-      data: {
-        userId: session.userId,
-        type: "breach_suspected",
-        ipAddress: req.ip ?? null,
-        metadata: { reusedSessionId: session.id },
-      },
+    await logEvent("breach_suspected", session.userId, req.ip ?? null, {
+      reusedSessionId: session.id,
     });
     res.clearCookie("refreshToken");
     throw new UnauthorizedError("Session invalid, all sessions revoked");
-  }
-
-  const user = await userRepository.findById(session.userId);
-  if (!user) {
-    await sessionRepository.revoke(session.id);
-    res.clearCookie("refreshToken");
-    throw new UnauthorizedError("User no longer exists");
   }
 
   await sessionRepository.revoke(session.id);
@@ -56,7 +44,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
     expiresAt: new Date(Date.now() + SEVEN_DAYS_MS),
   });
 
-  const accessToken = signAccessToken(user.id, user.role);
+  const accessToken = signAccessToken(session.userId);
 
   res.cookie("refreshToken", newRefreshToken, {
     httpOnly: true,
