@@ -7,6 +7,7 @@ import { asyncHandler } from "../../middleware/asyncHandler";
 import { AuthenticatedRequest } from "../../middleware/requireAuth";
 import { NotFoundError, ValidationError } from "../../core/errors/AppError";
 import env from "../../config/env";
+import prisma from "../../db/prisma";
 
 function parsePagination(query: Record<string, unknown>) {
   const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
@@ -52,6 +53,9 @@ export const getUserById = asyncHandler(
 
     const sessions = await sessionRepository.findAllByUserId(id);
     const { events } = await auditEventRepository.findPaginated(1, 20, id);
+    const oauthAccounts = await prisma.oAuthAccount.findMany({
+      where: { userId: id },
+    });
 
     res.status(200).json({
       user: {
@@ -72,6 +76,12 @@ export const getUserById = asyncHandler(
         expiresAt: s.expiresAt,
       })),
       recentEvents: events,
+      oauthAccounts: oauthAccounts.map((a) => ({
+        id: a.id,
+        provider: a.provider,
+        providerUserId: a.providerUserId,
+        createdAt: a.createdAt,
+      })),
     });
   },
 );
