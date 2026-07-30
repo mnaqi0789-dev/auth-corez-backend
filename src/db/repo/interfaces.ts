@@ -11,6 +11,7 @@ export interface IUserRepository {
     page: number,
     limit: number,
   ): Promise<{ users: User[]; total: number }>;
+  updateRole(id: string, role: string): Promise<User>;
 }
 
 export interface ISessionRepository {
@@ -27,6 +28,10 @@ export interface ISessionRepository {
   revokeAllForUser(userId: string): Promise<void>;
   findActiveByUserId(userId: string): Promise<Session[]>;
   findAllByUserId(userId: string): Promise<Session[]>;
+  findAllPaginated(
+    page: number,
+    limit: number,
+  ): Promise<{ sessions: Session[]; total: number }>;
 }
 
 export interface IAuditEventRepository {

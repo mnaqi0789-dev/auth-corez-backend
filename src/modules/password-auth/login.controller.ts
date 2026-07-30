@@ -32,7 +32,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new UnauthorizedError("Invalid email or password");
+    throw new UnauthorizedError("Access denied due invalid attempts");
   }
 
   const valid = await comparePassword(password, user.passwordHash);

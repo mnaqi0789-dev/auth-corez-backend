@@ -1,10 +1,12 @@
 import { Response } from "express";
+import { z } from "zod";
 import { userRepository } from "../../db/repo/user.repository";
 import { sessionRepository } from "../../db/repo/session.repository";
 import { auditEventRepository } from "../../db/repo/audit.repository";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { AuthenticatedRequest } from "../../middleware/requireAuth";
 import { NotFoundError, ValidationError } from "../../core/errors/AppError";
+import env from "../../config/env";
 
 function parsePagination(query: Record<string, unknown>) {
   const page = Math.max(1, parseInt(String(query.page ?? "1"), 10) || 1);
@@ -86,5 +88,117 @@ export const listAuditEvents = asyncHandler(
     );
 
     res.status(200).json({ events, page, limit, total });
+  },
+);
+
+const updateRoleSchema = z.object({
+  role: z.enum(["user", "admin"]),
+});
+
+export const updateUserRole = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      throw new ValidationError("Invalid user id");
+    }
+
+    const parsed = updateRoleSchema.safeParse(req.body);
+    if (!parsed.success) {
+      throw new ValidationError(
+        parsed.error.issues[0]?.message ?? "Invalid role",
+      );
+    }
+
+    const existing = await userRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError("User not found");
+    }
+
+    const updated = await userRepository.updateRole(id, parsed.data.role);
+
+    res.status(200).json({
+      id: updated.id,
+      email: updated.email,
+      role: updated.role,
+    });
+  },
+);
+
+export const unlockUser = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      throw new ValidationError("Invalid user id");
+    }
+
+    const existing = await userRepository.findById(id);
+    if (!existing) {
+      throw new NotFoundError("User not found");
+    }
+
+    const updated = await userRepository.resetFailedLoginAttempts(id);
+
+    res.status(200).json({
+      id: updated.id,
+      email: updated.email,
+      lockedUntil: updated.lockedUntil,
+      failedLoginAttempts: updated.failedLoginAttempts,
+    });
+  },
+);
+
+export const listAllSessions = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { page, limit } = parsePagination(req.query);
+    const { sessions, total } = await sessionRepository.findAllPaginated(
+      page,
+      limit,
+    );
+
+    res.status(200).json({
+      sessions: sessions.map((s) => ({
+        id: s.id,
+        userId: s.userId,
+        userAgent: s.userAgent,
+        ipAddress: s.ipAddress,
+        revoked: s.revoked,
+        createdAt: s.createdAt,
+        expiresAt: s.expiresAt,
+      })),
+      page,
+      limit,
+      total,
+    });
+  },
+);
+
+export const getConfig = asyncHandler(
+  async (_req: AuthenticatedRequest, res: Response) => {
+    res.status(200).json({
+      rateLimitWindow: "15 minutes",
+      rateLimitMax: 5,
+      accessTokenTTL: "15m",
+      refreshTokenTTL: "7d",
+      sessionStrategy: "JWT access + DB-backed refresh with rotation",
+      nodeEnv: env.NODE_ENV,
+    });
+  },
+);
+
+export const adminRevokeSession = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const { id } = req.params;
+    if (typeof id !== "string") {
+      throw new ValidationError("Invalid session id");
+    }
+
+    const session = await sessionRepository.findById(id);
+    if (!session) {
+      throw new NotFoundError("Session not found");
+    }
+
+    await sessionRepository.revoke(id);
+
+    res.status(200).json({ message: "Session revoked" });
   },
 );

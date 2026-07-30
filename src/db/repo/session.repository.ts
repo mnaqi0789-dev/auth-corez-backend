@@ -40,4 +40,17 @@ export const sessionRepository: ISessionRepository = {
       orderBy: { createdAt: "desc" },
     });
   },
+
+  async findAllPaginated(page, limit) {
+    const skip = (page - 1) * limit;
+    const [sessions, total] = await Promise.all([
+      prisma.session.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      }),
+      prisma.session.count(),
+    ]);
+    return { sessions, total };
+  },
 };

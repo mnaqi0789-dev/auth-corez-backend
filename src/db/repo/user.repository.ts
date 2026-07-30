@@ -47,4 +47,11 @@ export const userRepository: IUserRepository = {
     ]);
     return { users, total };
   },
+
+  updateRole(id, role) {
+    return prisma.user.update({
+      where: { id },
+      data: { role },
+    });
+  },
 };
