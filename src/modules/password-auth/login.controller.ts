@@ -16,6 +16,10 @@ const loginSchema = z.object({
 const MAX_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
 
+function minutesFromNow(date: Date): number {
+  return Math.max(1, Math.ceil((date.getTime() - Date.now()) / 60000));
+}
+
 export const login = asyncHandler(async (req: Request, res: Response) => {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -32,27 +36,38 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   }
 
   if (user.lockedUntil && user.lockedUntil > new Date()) {
-    throw new UnauthorizedError("Access denied due invalid attempts");
+    const mins = minutesFromNow(user.lockedUntil);
+    throw new UnauthorizedError(
+      `Account locked. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`,
+    );
   }
 
   const valid = await comparePassword(password, user.passwordHash);
   if (!valid) {
     const updated = await userRepository.incrementFailedLoginAttempts(user.id);
     await logEvent("login_failed", user.id, req.ip ?? null);
+
     if (updated.failedLoginAttempts >= MAX_ATTEMPTS) {
-      await userRepository.lockAccountUntil(
-        user.id,
-        new Date(Date.now() + LOCK_DURATION_MS),
-      );
+      const lockedUntil = new Date(Date.now() + LOCK_DURATION_MS);
+      await userRepository.lockAccountUntil(user.id, lockedUntil);
       await logEvent("account_locked", user.id, req.ip ?? null);
+      const mins = minutesFromNow(lockedUntil);
+      throw new UnauthorizedError(
+        `Account locked after too many failed attempts. Try again in ${mins} minute${mins === 1 ? "" : "s"}.`,
+      );
     }
-    throw new UnauthorizedError("Invalid email or password");
+
+    const remaining = MAX_ATTEMPTS - updated.failedLoginAttempts;
+    throw new UnauthorizedError(
+      `Invalid email or password. ${remaining} attempt${remaining === 1 ? "" : "s"} remaining before lockout.`,
+    );
   }
 
   await userRepository.resetFailedLoginAttempts(user.id);
   await logEvent("login_success", user.id, req.ip ?? null);
 
-const { accessToken, refreshToken } = await issueSession(user.id, req);
+  const { accessToken, refreshToken } = await issueSession(user.id, req);
+
   res.cookie("refreshToken", refreshToken, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
