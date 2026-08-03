@@ -9,6 +9,8 @@ import prisma from "../../db/prisma";
 import { ValidationError, UnauthorizedError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { logEvent } from "../../core/audit/auditLogger";
+import { sendEmail } from "../../core/email/mailer";
+import { passwordResetEmail } from "../../core/email/templates";
 import env from "../../config/env";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -33,7 +35,6 @@ export const forgotPassword = asyncHandler(
 
     const { email } = parsed.data;
     const user = await userRepository.findByEmail(email);
-    let devResetLink: string | undefined;
 
     if (user) {
       const rawToken = crypto.randomBytes(32).toString("hex");
@@ -48,16 +49,16 @@ export const forgotPassword = asyncHandler(
         },
       });
 
-      console.log(`Password reset link: /reset-password?token=${rawToken}`);
+      const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
+      const { subject, html } = passwordResetEmail(resetUrl);
 
-      if (env.NODE_ENV !== "production") {
-        devResetLink = `/reset-password?token=${rawToken}`;
-      }
+      sendEmail(user.email, subject, html).catch((err) =>
+        console.error("Failed to send password reset email", err),
+      );
     }
 
     res.status(200).json({
       message: "If that email exists, a reset link has been sent",
-      ...(devResetLink ? { devResetLink } : {}),
     });
   },
 );
