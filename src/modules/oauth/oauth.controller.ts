@@ -163,7 +163,7 @@ export const googleCallback = asyncHandler(
       { provider: "google" },
     );
 
-    const { accessToken, refreshToken } = await issueSession(userId, req);
+    const { refreshToken } = await issueSession(userId, req);
     res.cookie("refreshToken", refreshToken, {
       httpOnly: true,
       secure: env.NODE_ENV === "production",
@@ -171,6 +171,6 @@ export const googleCallback = asyncHandler(
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
 
-    res.status(200).json({ accessToken });
+    res.redirect(`${env.FRONTEND_URL}/dashboard`);
   },
 );

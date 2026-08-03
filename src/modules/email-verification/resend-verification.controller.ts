@@ -6,6 +6,7 @@ import { hashToken } from "../tokens/hash.util";
 import prisma from "../../db/prisma";
 import { ValidationError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
+import env from "../../config/env";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
 
@@ -24,6 +25,7 @@ export const resendVerification = asyncHandler(
 
     const { email } = parsed.data;
     const user = await userRepository.findByEmail(email);
+    let devVerifyLink: string | undefined;
 
     if (user && !user.emailVerified) {
       const rawToken = crypto.randomBytes(32).toString("hex");
@@ -39,11 +41,16 @@ export const resendVerification = asyncHandler(
       });
 
       console.log(`Email verification link: /verify-email/${rawToken}`);
+
+      if (env.NODE_ENV !== "production") {
+        devVerifyLink = `/verify-email/${rawToken}`;
+      }
     }
 
     res.status(200).json({
       message:
         "If that email exists and is unverified, a new link has been sent",
+      ...(devVerifyLink ? { devVerifyLink } : {}),
     });
   },
 );
