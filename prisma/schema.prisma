@@ -50,6 +50,7 @@ model OAuthAccount {
   user           User     @relation(fields: [userId], references: [id])
   provider       String
   providerUserId String
+  email          String?
   createdAt      DateTime @default(now())
 
   @@unique([provider, providerUserId])

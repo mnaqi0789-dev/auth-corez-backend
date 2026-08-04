@@ -6,11 +6,6 @@ import {
 } from "./providers/google.provider";
 import { userRepository } from "../../db/repo/user.repository";
 import { issueSession } from "../tokens/session.service";
-import {
-  ValidationError,
-  UnauthorizedError,
-  ConflictError,
-} from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { logEvent } from "../../core/audit/auditLogger";
 import { AuthenticatedRequest } from "../../middleware/requireAuth";
@@ -25,13 +20,17 @@ interface StateEntry {
 const stateStore = new Map<string, StateEntry>();
 const STATE_TTL_MS = 10 * 60 * 1000;
 
+function redirectWithError(res: Response, target: string, message: string) {
+  res.redirect(
+    `${env.FRONTEND_URL}${target}?oauthError=${encodeURIComponent(message)}`,
+  );
+}
+
 export const googleRedirect = asyncHandler(
   async (_req: Request, res: Response) => {
     const state = crypto.randomBytes(16).toString("hex");
     stateStore.set(state, { expiry: Date.now() + STATE_TTL_MS });
-
-    const url = buildAuthUrl(state);
-    res.redirect(url);
+    res.redirect(buildAuthUrl(state));
   },
 );
 
@@ -42,9 +41,19 @@ export const googleLinkRedirect = asyncHandler(
       expiry: Date.now() + STATE_TTL_MS,
       linkUserId: req.user!.userId,
     });
+    res.redirect(buildAuthUrl(state));
+  },
+);
 
-    const url = buildAuthUrl(state);
-    res.redirect(url);
+export const googleStatus = asyncHandler(
+  async (req: AuthenticatedRequest, res: Response) => {
+    const link = await prisma.oAuthAccount.findFirst({
+      where: { userId: req.user!.userId, provider: "google" },
+    });
+    res.status(200).json({
+      linked: !!link,
+      email: link?.email ?? null,
+    });
   },
 );
 
@@ -53,18 +62,30 @@ export const googleCallback = asyncHandler(
     const { code, state } = req.query;
 
     if (typeof state !== "string" || !stateStore.has(state)) {
-      throw new ValidationError("Invalid or missing state parameter");
+      return redirectWithError(
+        res,
+        "/login",
+        "Invalid or missing state parameter",
+      );
     }
 
     const entry = stateStore.get(state)!;
     stateStore.delete(state);
 
     if (Date.now() > entry.expiry) {
-      throw new ValidationError("State parameter expired");
+      return redirectWithError(
+        res,
+        entry.linkUserId ? "/dashboard" : "/login",
+        "This Google sign-in link expired, please try again",
+      );
     }
 
     if (typeof code !== "string") {
-      throw new ValidationError("Missing authorization code");
+      return redirectWithError(
+        res,
+        entry.linkUserId ? "/dashboard" : "/login",
+        "Missing authorization code from Google",
+      );
     }
 
     const profile = await exchangeCodeAndVerify(code);
@@ -80,7 +101,9 @@ export const googleCallback = asyncHandler(
       });
 
       if (existingLink && existingLink.userId !== entry.linkUserId) {
-        throw new ConflictError(
+        return redirectWithError(
+          res,
+          "/dashboard",
           "This Google account is already linked to a different user",
         );
       }
@@ -91,6 +114,7 @@ export const googleCallback = asyncHandler(
             userId: entry.linkUserId,
             provider: "google",
             providerUserId: profile.sub,
+            email: profile.email,
           },
         });
         await logEvent("oauth_login", entry.linkUserId, req.ip ?? null, {
@@ -120,7 +144,11 @@ export const googleCallback = asyncHandler(
         existingOAuthAccount.userId,
       );
       if (!linkedUser) {
-        throw new UnauthorizedError("Linked account no longer exists");
+        return redirectWithError(
+          res,
+          "/login",
+          "Linked account no longer exists",
+        );
       }
       userId = linkedUser.id;
     } else {
@@ -132,12 +160,15 @@ export const googleCallback = asyncHandler(
             userId: existingUser.id,
             provider: "google",
             providerUserId: profile.sub,
+            email: profile.email,
           },
         });
         userId = existingUser.id;
       } else if (existingUser && !profile.emailVerified) {
-        throw new UnauthorizedError(
-          "Email exists but is not verified with Google; cannot auto-link",
+        return redirectWithError(
+          res,
+          "/login",
+          "Email exists but is not verified with Google, cannot auto-link",
         );
       } else {
         const newUser = await userRepository.create({
@@ -149,6 +180,7 @@ export const googleCallback = asyncHandler(
             userId: newUser.id,
             provider: "google",
             providerUserId: profile.sub,
+            email: profile.email,
           },
         });
         userId = newUser.id;

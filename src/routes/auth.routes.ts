@@ -3,6 +3,7 @@ import { register } from "../modules/password-auth/register.controller";
 import { login } from "../modules/password-auth/login.controller";
 import { refresh } from "../modules/tokens/refresh.controller";
 import { requireAuth, AuthenticatedRequest } from "../middleware/requireAuth";
+import { requireAuthCookie } from "../middleware/requireAuthCookie";
 import { userRepository } from "../db/repo/user.repository";
 import { verifyEmail } from "../modules/email-verification/verify-email.controller";
 import { resendVerification } from "../modules/email-verification/resend-verification.controller";
@@ -11,6 +12,7 @@ import {
   googleRedirect,
   googleLinkRedirect,
   googleCallback,
+  googleStatus,
 } from "../modules/oauth/oauth.controller";
 import { Response } from "express";
 import { rateLimiter } from "../middleware/rateLimiter";
@@ -62,7 +64,8 @@ router.post(
   resendVerification,
 );
 router.get("/oauth/google", googleRedirect);
-router.get("/oauth/google/link", requireAuth, googleLinkRedirect);
+router.get("/oauth/google/link", requireAuthCookie, googleLinkRedirect);
+router.get("/oauth/google/status", requireAuth, googleStatus);
 router.get("/oauth/google/callback", googleCallback);
 
 export default router;
