@@ -11,6 +11,7 @@ import { asyncHandler } from "../../middleware/asyncHandler";
 import { logEvent } from "../../core/audit/auditLogger";
 import { sendEmail } from "../../core/email/mailer";
 import { passwordResetEmail } from "../../core/email/templates";
+import { getPreferredDeliveryEmail } from "../oauth/linked-email.util";
 import env from "../../config/env";
 
 const RESET_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -51,8 +52,12 @@ export const forgotPassword = asyncHandler(
 
       const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${rawToken}`;
       const { subject, html } = passwordResetEmail(resetUrl);
+      const deliveryEmail = await getPreferredDeliveryEmail(
+        user.id,
+        user.email,
+      );
 
-      sendEmail(user.email, subject, html).catch((err) =>
+      sendEmail(deliveryEmail, subject, html).catch((err) =>
         console.error("Failed to send password reset email", err),
       );
     }

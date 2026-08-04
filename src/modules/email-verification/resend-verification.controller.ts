@@ -8,6 +8,7 @@ import { ValidationError } from "../../core/errors/AppError";
 import { asyncHandler } from "../../middleware/asyncHandler";
 import { sendEmail } from "../../core/email/mailer";
 import { verificationEmail } from "../../core/email/templates";
+import { getPreferredDeliveryEmail } from "../oauth/linked-email.util";
 import env from "../../config/env";
 
 const VERIFY_TOKEN_TTL_MS = 24 * 60 * 60 * 1000;
@@ -43,8 +44,12 @@ export const resendVerification = asyncHandler(
 
       const verifyUrl = `${env.FRONTEND_URL}/verify-email/${rawToken}`;
       const { subject, html } = verificationEmail(verifyUrl);
+      const deliveryEmail = await getPreferredDeliveryEmail(
+        user.id,
+        user.email,
+      );
 
-      sendEmail(user.email, subject, html).catch((err) =>
+      sendEmail(deliveryEmail, subject, html).catch((err) =>
         console.error("Failed to send verification email", err),
       );
     }
