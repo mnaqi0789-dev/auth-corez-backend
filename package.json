@@ -4,13 +4,15 @@
   "description": "Here i would be making personal docs about each and everything i learned through out my fullstack dev journey",
   "main": "index.js",
   "scripts": {
-  "dev": "tsx watch src/index.ts",
-  "db:seed": "tsx prisma/seed.ts",
-  "test": "echo \"Error: no test specified\" && exit 1"
-},
-"prisma": {
-  "seed": "tsx prisma/seed.ts"
-},
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "db:seed": "tsx prisma/seed.ts",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mnaqi0789-dev/auth-corez-backend.git"
