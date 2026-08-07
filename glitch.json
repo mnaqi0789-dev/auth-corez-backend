@@ -1,7 +1,0 @@
-{
-  "install": "npm install && npm run build",
-  "start": "npm run start",
-  "watch": {
-    "ignore": ["\\.git", "node_modules"]
-  }
-}

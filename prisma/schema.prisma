@@ -66,3 +66,15 @@ model Token {
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
 }
+
+model RateLimitEntry {
+  key     String   @id
+  count   Int
+  resetAt DateTime
+}
+
+model OAuthState {
+  state       String   @id
+  linkUserId  String?
+  expiresAt   DateTime
+}

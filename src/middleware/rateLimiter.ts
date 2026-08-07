@@ -1,27 +1,25 @@
 import { Request, Response, NextFunction } from "express";
-
-interface WindowEntry {
-  count: number;
-  resetAt: number;
-}
-
-const store = new Map<string, WindowEntry>();
+import prisma from "../db/prisma";
 
 export function rateLimiter(maxRequests: number, windowMs: number) {
-  return (req: Request, res: Response, next: NextFunction) => {
+  return async (req: Request, res: Response, next: NextFunction) => {
     const key = `${req.ip ?? "unknown"}:${req.baseUrl}${req.path}`;
-    const now = Date.now();
+    const now = new Date();
 
-    let entry = store.get(key);
+    let entry = await prisma.rateLimitEntry.findUnique({ where: { key } });
+
     if (!entry || now > entry.resetAt) {
-      entry = { count: 0, resetAt: now + windowMs };
-      store.set(key, entry);
+      entry = await prisma.rateLimitEntry.upsert({
+        where: { key },
+        create: { key, count: 0, resetAt: new Date(Date.now() + windowMs) },
+        update: { count: 0, resetAt: new Date(Date.now() + windowMs) },
+      });
     }
 
     const remaining = Math.max(0, maxRequests - entry.count - 1);
     res.setHeader("X-RateLimit-Limit", String(maxRequests));
     res.setHeader("X-RateLimit-Remaining", String(remaining));
-    res.setHeader("X-RateLimit-Reset", String(entry.resetAt));
+    res.setHeader("X-RateLimit-Reset", String(entry.resetAt.getTime()));
 
     if (entry.count >= maxRequests) {
       return res
@@ -29,7 +27,11 @@ export function rateLimiter(maxRequests: number, windowMs: number) {
         .json({ error: "Too many requests, try again later" });
     }
 
-    entry.count += 1;
+    await prisma.rateLimitEntry.update({
+      where: { key },
+      data: { count: { increment: 1 } },
+    });
+
     next();
   };
 }

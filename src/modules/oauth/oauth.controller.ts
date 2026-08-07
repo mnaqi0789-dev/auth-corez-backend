@@ -12,12 +12,6 @@ import { AuthenticatedRequest } from "../../middleware/requireAuth";
 import prisma from "../../db/prisma";
 import env from "../../config/env";
 
-interface StateEntry {
-  expiry: number;
-  linkUserId?: string;
-}
-
-const stateStore = new Map<string, StateEntry>();
 const STATE_TTL_MS = 10 * 60 * 1000;
 
 function redirectWithError(res: Response, target: string, message: string) {
@@ -29,7 +23,9 @@ function redirectWithError(res: Response, target: string, message: string) {
 export const googleRedirect = asyncHandler(
   async (_req: Request, res: Response) => {
     const state = crypto.randomBytes(16).toString("hex");
-    stateStore.set(state, { expiry: Date.now() + STATE_TTL_MS });
+    await prisma.oAuthState.create({
+      data: { state, expiresAt: new Date(Date.now() + STATE_TTL_MS) },
+    });
     res.redirect(buildAuthUrl(state));
   },
 );
@@ -37,9 +33,12 @@ export const googleRedirect = asyncHandler(
 export const googleLinkRedirect = asyncHandler(
   async (req: AuthenticatedRequest, res: Response) => {
     const state = crypto.randomBytes(16).toString("hex");
-    stateStore.set(state, {
-      expiry: Date.now() + STATE_TTL_MS,
-      linkUserId: req.user!.userId,
+    await prisma.oAuthState.create({
+      data: {
+        state,
+        linkUserId: req.user!.userId,
+        expiresAt: new Date(Date.now() + STATE_TTL_MS),
+      },
     });
     res.redirect(buildAuthUrl(state));
   },
@@ -61,7 +60,7 @@ export const googleCallback = asyncHandler(
   async (req: Request, res: Response) => {
     const { code, state } = req.query;
 
-    if (typeof state !== "string" || !stateStore.has(state)) {
+    if (typeof state !== "string") {
       return redirectWithError(
         res,
         "/login",
@@ -69,10 +68,19 @@ export const googleCallback = asyncHandler(
       );
     }
 
-    const entry = stateStore.get(state)!;
-    stateStore.delete(state);
+    const entry = await prisma.oAuthState.findUnique({ where: { state } });
 
-    if (Date.now() > entry.expiry) {
+    if (!entry) {
+      return redirectWithError(
+        res,
+        "/login",
+        "Invalid or missing state parameter",
+      );
+    }
+
+    await prisma.oAuthState.delete({ where: { state } });
+
+    if (Date.now() > entry.expiresAt.getTime()) {
       return redirectWithError(
         res,
         entry.linkUserId ? "/dashboard" : "/login",
